@@ -1,0 +1,41 @@
+# macOS / editor
+.DS_Store
+*.swp
+*.swo
+.idea/
+.vscode/
+
+# Python caches
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Local environment
+.env
+.env.*
+
+# Generated datasets, model checkpoints, and visual outputs
+data/
+outputs/
+*.pt
+*.pth
+*.ckpt
+
+# Logs and temporary files
+*.log
+tmp/
+temp/
+
+# FiftyOne / dataset tooling
+fiftyone/
+.fiftyone/
+
