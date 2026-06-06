@@ -19,9 +19,16 @@
 
 ## 快速开始
 
+队友第一次 clone 后，推荐先跑最小 Demo，不需要下载真实照片数据：
+
 ```bash
-python3 scripts/generate_dataset.py --num-samples 600
-python3 scripts/train.py --epochs 5 --batch-size 64
+git clone git@github.com:Wang-Yuhe/RoboTest.git
+cd RoboTest
+python3 -m venv .venv
+source .venv/bin/activate
+python3 -m pip install -r requirements-minimal.txt
+python3 scripts/generate_dataset.py --num-samples 600 --difficulty medium
+python3 scripts/train.py --epochs 2 --batch-size 64 --progress-every 5
 python3 scripts/evaluate.py --mode template
 streamlit run app.py
 ```
@@ -39,6 +46,26 @@ python3 scripts/make_demo_html.py
 ```
 
 然后打开 `outputs/demo.html`。
+
+完整队友环境、真实照片数据复现、模型权重分发方式见 [docs/teammate_setup.md](docs/teammate_setup.md)。
+
+如果队友不想重新训练，可以下载你发布的 `photo_model_100cls_attn_artifacts.tar.gz`，解压后把 checkpoint 放进 `outputs/`：
+
+```bash
+tar -xzf photo_model_100cls_attn_artifacts.tar.gz
+mkdir -p outputs
+cp photo_model_100cls_attn/photo_model_100cls_attn.pt outputs/
+```
+
+之后就可以直接用现有 checkpoint 做自定义九宫格推理：
+
+```bash
+python3 scripts/predict_image.py \
+  --image path/to/your_grid.png \
+  --prompt "请点击汽车" \
+  --checkpoint outputs/photo_model_100cls_attn.pt \
+  --output outputs/custom_prediction.png
+```
 
 ## 目录结构
 

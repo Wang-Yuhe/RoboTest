@@ -64,6 +64,8 @@ python scripts/predict_image.py \
 ```
 
 To regenerate HTML examples, the teammate also needs the corresponding dataset under `data/photo_grid_100cls/`.
+
+If `photo_demo_100cls_model.html` is included, it can be opened directly in a browser without training or rebuilding the dataset.
 EOF
 
 mkdir -p "$(dirname "$ARCHIVE")"

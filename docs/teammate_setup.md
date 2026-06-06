@@ -5,7 +5,7 @@
 ## 1. 获取代码
 
 ```bash
-git clone <REMOTE_URL>
+git clone git@github.com:Wang-Yuhe/RoboTest.git
 cd RoboTest
 ```
 
@@ -16,13 +16,19 @@ cd RoboTest
 ```bash
 conda create -n robot-test python=3.12 -y
 conda activate robot-test
-pip install -r requirements.txt
+pip install -r requirements-minimal.txt
 ```
 
 如果 `torch` 安装较慢或失败，可以按 PyTorch 官网给出的本机平台命令单独安装 PyTorch，然后再运行：
 
 ```bash
-pip install numpy pillow streamlit requests fiftyone
+pip install numpy pillow streamlit
+```
+
+只有在复现实照片/Open Images 流程时，才需要额外安装：
+
+```bash
+pip install -r requirements-openimages.txt
 ```
 
 ## 3. 最小可运行检查
@@ -133,7 +139,39 @@ bash scripts/export_trained_artifacts.sh
 release_artifacts/photo_model_100cls_attn_artifacts.tar.gz
 ```
 
-把这个压缩包发给队友或上传到 GitHub Release。队友解压后，把 `.pt` checkpoint 复制到项目的 `outputs/` 目录即可直接推理，不需要重新训练。
+把这个压缩包发给队友或上传到 GitHub Release。推荐上传到：
+
+```text
+https://github.com/Wang-Yuhe/RoboTest/releases
+```
+
+队友 clone 项目并安装最小依赖后，下载并解压这个压缩包：
+
+```bash
+tar -xzf photo_model_100cls_attn_artifacts.tar.gz
+mkdir -p outputs
+cp photo_model_100cls_attn/photo_model_100cls_attn.pt outputs/
+```
+
+压缩包里如果包含 `photo_demo_100cls_model.html`，可以直接用浏览器打开这个 HTML 看演示，不需要重新训练，也不需要重新生成数据。
+
+如果要用现有 checkpoint 对一张自定义九宫格图片推理，运行：
+
+```bash
+python scripts/predict_image.py \
+  --image path/to/your_grid.png \
+  --prompt "请点击汽车" \
+  --checkpoint outputs/photo_model_100cls_attn.pt \
+  --output outputs/custom_prediction.png
+```
+
+输出会保存到：
+
+```text
+outputs/custom_prediction.png
+```
+
+注意：只有在重新生成 `data/photo_grid_100cls/` 或重新评估时，才需要真实照片数据；单张图片推理只需要 checkpoint。
 
 Git LFS 示例：
 
