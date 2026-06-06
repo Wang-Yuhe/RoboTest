@@ -26,6 +26,7 @@ ENV/
 # Generated datasets, model checkpoints, and visual outputs
 data/
 outputs/
+release_artifacts/
 *.pt
 *.pth
 *.ckpt
@@ -38,4 +39,3 @@ temp/
 # FiftyOne / dataset tooling
 fiftyone/
 .fiftyone/
-
