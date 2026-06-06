@@ -12,7 +12,7 @@ from src.multimodal_captcha.dataset import CaptchaDataset, build_vocab
 from src.multimodal_captcha.generator import draw_prediction_overlay, generate_dataset
 from src.multimodal_captcha.model import MultimodalGridLocator, build_model_from_checkpoint, predict_index
 from src.multimodal_captcha.template_matcher import template_grounding_predict
-from src.multimodal_captcha.trajectory import cell_center, generate_mouse_trajectory
+from src.multimodal_captcha.trajectory import generate_mouse_trajectory, random_point_in_cell
 from src.multimodal_captcha.visualize import draw_trajectory
 
 
@@ -66,7 +66,11 @@ with left:
     else:
         pred, probs = color_grounding_predict(image, record["prompt"])
     overlay = draw_prediction_overlay(image, record["target_index"], pred)
-    points = generate_mouse_trajectory(cell_center(pred, image.size[0]), seed=st.session_state.sample_idx)
+    points = generate_mouse_trajectory(
+        random_point_in_cell(pred, image.size[0], random.Random(st.session_state.sample_idx)),
+        seed=st.session_state.sample_idx,
+        image_size=image.size[0],
+    )
     vis = draw_trajectory(overlay, points)
     st.image(vis, caption="绿色框为真实目标，红色框为模型预测，蓝线为生成轨迹。", width=520)
 

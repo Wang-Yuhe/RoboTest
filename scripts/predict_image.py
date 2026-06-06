@@ -16,7 +16,7 @@ from src.multimodal_captcha.dataset import encode_text
 from src.multimodal_captcha.generator import draw_prediction_overlay
 from src.multimodal_captcha.model import MultimodalGridLocator, build_model_from_checkpoint, predict_index
 from src.multimodal_captcha.template_matcher import template_grounding_predict
-from src.multimodal_captcha.trajectory import cell_center, generate_mouse_trajectory
+from src.multimodal_captcha.trajectory import generate_mouse_trajectory, random_point_in_cell
 from src.multimodal_captcha.visualize import draw_trajectory
 
 
@@ -49,9 +49,9 @@ def main() -> None:
     else:
         pred, probs = color_grounding_predict(image, args.prompt)
 
-    click = cell_center(pred, image.width)
+    click = random_point_in_cell(pred, image.width, __import__("random").Random(pred + image.width))
     overlay = draw_prediction_overlay(image, target_index=pred, predicted_index=pred)
-    trajectory = generate_mouse_trajectory(click, seed=pred)
+    trajectory = generate_mouse_trajectory(click, seed=pred, image_size=image.width)
     vis = draw_trajectory(overlay, trajectory)
 
     output = Path(args.output)

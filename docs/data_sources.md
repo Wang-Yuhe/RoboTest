@@ -133,3 +133,43 @@ export HTTP_PROXY=http://127.0.0.1:7890
 ```
 
 端口号需要改成你本机代理软件实际使用的端口。
+
+## 扩展更多类别
+
+为了提升泛化能力，项目提供了扩展类别预设，覆盖车辆、动物、家具、日用品和食物等 40 多个常见物体类别。运行：
+
+```bash
+bash scripts/run_expand_photo_classes.sh \
+  data/openimages_extended_raw \
+  data/photo_objects \
+  5000 \
+  120
+```
+
+含义：
+
+- 从 Open Images 下载最多 5000 张候选图片；
+- 每类最多裁剪 120 张目标物体图；
+- 输出到 `data/photo_objects`；
+- 自动生成类别覆盖报告。
+
+查看当前类别数量：
+
+```bash
+python3 scripts/report_photo_objects.py \
+  --photo-root data/photo_objects \
+  --min-images 20
+```
+
+构建更大的训练集：
+
+```bash
+python3 scripts/build_photo_grid_dataset.py \
+  --photo-root data/photo_objects \
+  --output-dir data/photo_grid_large \
+  --num-samples 3000 \
+  --min-images-per-class 20 \
+  --hard-augment
+```
+
+当可用类别数达到 15-30 个以上时，九宫格组合会更丰富，模型更不容易只记住少量类别和背景模式。

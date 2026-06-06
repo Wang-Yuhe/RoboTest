@@ -9,13 +9,16 @@ CROPS_PER_CLASS="${5:-80}"
 GRID_SAMPLES="${6:-800}"
 EPOCHS="${7:-20}"
 MODEL_SIZE="${8:-small}"
+HARD_AUGMENT="${9:-true}"
+PYTHON="${PYTHON:-python}"
 
 cd "$(dirname "$0")/.."
 
 echo "==> Downloading Open Images subset and exporting object crops"
-python3 scripts/download_openimages_subset.py \
+"$PYTHON" scripts/download_openimages_subset.py \
   --output-dir "$RAW_DIR" \
   --photo-root "$PHOTO_ROOT" \
+  --class-preset broad \
   --max-samples "$MAX_SAMPLES" \
   --crops-per-class "$CROPS_PER_CLASS"
 
@@ -26,7 +29,8 @@ bash scripts/run_photo_grid_pipeline.sh \
   "$GRID_DIR" \
   "$GRID_SAMPLES" \
   "$EPOCHS" \
-  "$MODEL_SIZE"
+  "$MODEL_SIZE" \
+  "$HARD_AUGMENT"
 
 echo
 echo "==> Open Images auto pipeline complete"

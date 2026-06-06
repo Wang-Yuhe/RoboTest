@@ -17,7 +17,7 @@ from src.multimodal_captcha.dataset import CaptchaDataset, build_vocab
 from src.multimodal_captcha.generator import draw_prediction_overlay, generate_dataset
 from src.multimodal_captcha.model import MultimodalGridLocator, build_model_from_checkpoint, predict_index
 from src.multimodal_captcha.template_matcher import template_grounding_predict
-from src.multimodal_captcha.trajectory import cell_center, generate_mouse_trajectory
+from src.multimodal_captcha.trajectory import generate_mouse_trajectory, random_point_in_cell
 from src.multimodal_captcha.visualize import draw_trajectory
 
 
@@ -72,7 +72,8 @@ def main() -> None:
             model_label = "模板图文模型"
         baseline_pred, _ = color_grounding_predict(image, record["prompt"])
         overlay = draw_prediction_overlay(image, int(record["target_index"]), pred)
-        trajectory = generate_mouse_trajectory(cell_center(pred, image.size[0]), seed=idx)
+        click = random_point_in_cell(pred, image.size[0], random.Random(idx + card_idx * 37))
+        trajectory = generate_mouse_trajectory(click, seed=idx, image_size=image.size[0])
         vis = draw_trajectory(overlay, trajectory)
         image_path = asset_dir / f"example_{card_idx:02d}.png"
         vis.save(image_path)

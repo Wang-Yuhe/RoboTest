@@ -94,6 +94,13 @@ python3 scripts/generate_dataset.py --output-dir data/easy --difficulty easy
 python3 scripts/generate_dataset.py --output-dir data/medium --difficulty medium
 python3 scripts/generate_dataset.py --output-dir data/hard --difficulty hard
 
+# 生成更困难的真实照片九宫格：随机裁剪、旋转、颜色扰动、噪声和模糊
+python3 scripts/build_photo_grid_dataset.py \
+  --photo-root data/photo_objects \
+  --output-dir data/photo_grid_hard_aug \
+  --num-samples 800 \
+  --hard-augment
+
 # 一键运行 hard 测试
 bash scripts/run_hard_test.sh
 
@@ -105,6 +112,24 @@ bash scripts/run_photo_grid_pipeline.sh data/photo_objects data/photo_grid 300
 
 # 自动下载 Open Images、裁剪物体、拼九宫格、训练并评估
 bash scripts/run_openimages_auto_pipeline.sh
+
+# 扩展下载更多真实照片类别，目标约 100 类、每类 100 张
+bash scripts/run_expand_photo_classes.sh data/openimages_broad_raw data/photo_objects 20000 100 broad 100
+
+# 如果 broad validation 仍然不够，用 train split 优先补齐最接近 100 张的类别
+bash scripts/run_fill_photo_gaps.sh data/photo_objects data/openimages_gap_fill_raw 100 100 50000 2 train
+
+# 查看真实照片类别覆盖情况
+python3 scripts/report_photo_objects.py --photo-root data/photo_objects --min-images 100
+
+# 用更多类别构造大规模真实照片九宫格
+python3 scripts/build_photo_grid_dataset.py \
+  --photo-root data/photo_objects \
+  --output-dir data/photo_grid_100cls \
+  --num-samples 10000 \
+  --min-images-per-class 100 \
+  --max-classes 120 \
+  --hard-augment
 
 # 生成带格子文字标签的调试数据
 python3 scripts/generate_dataset.py --num-samples 100 --debug-labels
@@ -137,6 +162,36 @@ python3 scripts/train.py \
   --patience 8 \
   --model-size base
 
+# 更强的注意力融合模型：残差 CNN + 9 格 Transformer + 图文交互特征
+python3 scripts/train.py \
+  --data-dir data/photo_grid_hard_aug \
+  --output outputs/photo_model_attn.pt \
+  --epochs 30 \
+  --batch-size 64 \
+  --lr 0.001 \
+  --aux-weight 0.7 \
+  --patience 8 \
+  --model-size attn
+
+# 100 类照片数据上的更强模型训练
+python3 scripts/train.py \
+  --data-dir data/photo_grid_100cls \
+  --output outputs/photo_model_100cls_attn.pt \
+  --epochs 40 \
+  --batch-size 64 \
+  --lr 0.001 \
+  --aux-weight 0.7 \
+  --patience 10 \
+  --model-size attn
+
+# 快速生成 HTML 看效果
+python3 scripts/make_demo_html.py \
+  --data-dir data/photo_grid_100cls \
+  --mode model \
+  --checkpoint outputs/photo_model_100cls_attn.pt \
+  --output outputs/photo_demo_100cls.html \
+  --num-examples 8
+
 # 模板图文模型预测并保存预测图
 python3 scripts/predict.py --mode template
 
@@ -156,5 +211,7 @@ python3 scripts/evaluate.py --mode model --checkpoint outputs/model.pt
 ```
 
 说明：默认生成的九宫格图片不包含文字标签，颜色和类别标注只保存在 `manifest.jsonl` 中。`--debug-labels` 只用于人工检查数据。当前默认实验数据使用 `medium` 难度，颜色会重复，因此单纯颜色基线不再足够；模板图文匹配模型用于展示更完整的“文本条件 + 图像颜色/形状特征 + 目标定位 + 轨迹生成”链路。神经模型是课程扩展基线，适合继续改进为 CLIP、ViT、Cross-Attention 或目标检测式方案。
+
+轨迹生成已使用随机起点和随机格内落点，并带有曲线、轻微抖动和末端停顿，不再固定从左上角移动到格子中心。
 
 课程报告骨架见 [docs/report.md](docs/report.md)。

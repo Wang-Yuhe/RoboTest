@@ -4,6 +4,7 @@ import argparse
 import json
 import math
 import sys
+import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -17,7 +18,7 @@ from src.multimodal_captcha.dataset import CaptchaDataset, build_vocab
 from src.multimodal_captcha.generator import draw_prediction_overlay, generate_dataset
 from src.multimodal_captcha.model import MultimodalGridLocator, build_model_from_checkpoint, predict_index
 from src.multimodal_captcha.template_matcher import template_grounding_predict
-from src.multimodal_captcha.trajectory import cell_center, generate_mouse_trajectory
+from src.multimodal_captcha.trajectory import cell_center, generate_mouse_trajectory, random_point_in_cell
 from src.multimodal_captcha.visualize import draw_trajectory
 
 
@@ -50,6 +51,7 @@ def main() -> None:
     parser.add_argument("--train-ratio", type=float, default=0.85)
     parser.add_argument("--max-failures", type=int, default=12)
     parser.add_argument("--output-dir", default="outputs/eval")
+    parser.add_argument("--progress-every", type=int, default=100, help="Print progress every N examples. 0 disables progress.")
     args = parser.parse_args()
 
     data_dir = Path(args.data_dir)
@@ -68,6 +70,21 @@ def main() -> None:
     distances = []
     failures = []
     confusion = np.zeros((9, 9), dtype=int)
+    start_time = time.time()
+    total = len(dataset)
+    print(
+        json.dumps(
+            {
+                "status": "start",
+                "mode": args.mode,
+                "split": args.split,
+                "total": total,
+                "data_dir": str(data_dir),
+            },
+            ensure_ascii=False,
+        ),
+        flush=True,
+    )
 
     for idx, record in enumerate(dataset.records):
         sample = dataset[idx]
@@ -92,7 +109,11 @@ def main() -> None:
 
         if not is_correct and len(failures) < args.max_failures:
             overlay = draw_prediction_overlay(image, target, pred)
-            trajectory = generate_mouse_trajectory(cell_center(pred, image.size[0]), seed=idx)
+            rng_seed = idx + int(target) * 997
+            import random
+
+            click = random_point_in_cell(pred, image.size[0], random.Random(rng_seed))
+            trajectory = generate_mouse_trajectory(click, seed=rng_seed, image_size=image.size[0])
             vis = draw_trajectory(overlay, trajectory)
             failure_path = failure_dir / f"failure_{len(failures):03d}.png"
             vis.save(failure_path)
@@ -106,8 +127,27 @@ def main() -> None:
                     "image": str(failure_path),
                 }
             )
+        done = idx + 1
+        if args.progress_every > 0 and (done == 1 or done % args.progress_every == 0 or done == total):
+            elapsed = time.time() - start_time
+            examples_per_sec = done / elapsed if elapsed > 0 else 0.0
+            remaining = (total - done) / examples_per_sec if examples_per_sec > 0 else 0.0
+            print(
+                json.dumps(
+                    {
+                        "status": "progress",
+                        "done": done,
+                        "total": total,
+                        "percent": round(done / max(total, 1) * 100, 2),
+                        "accuracy_so_far": round(correct / max(done, 1), 4),
+                        "examples_per_sec": round(examples_per_sec, 2),
+                        "eta_sec": round(remaining, 1),
+                    },
+                    ensure_ascii=False,
+                ),
+                flush=True,
+            )
 
-    total = len(dataset)
     metrics = {
         "mode": args.mode,
         "split": args.split,
