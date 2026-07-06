@@ -1,5 +1,7 @@
 # macOS / editor
 .DS_Store
+._*
+**/._*
 *.swp
 *.swo
 .idea/
@@ -19,6 +21,13 @@ venv/
 env/
 ENV/
 
+# Node / frontend dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
 # Local environment
 .env
 .env.*
@@ -27,15 +36,31 @@ ENV/
 data/
 outputs/
 release_artifacts/
+kaggle_upload/
+photo_model_100cls_attn/
+*_artifacts/
+pictures/similar_grid_*.jpg
+pictures/*_prediction*.png
+pictures/custom_prediction*.png
+pictures/001.png
+pictures/002.png
+pictures/003.png
+pictures/003_square.png
 *.pt
 *.pth
 *.ckpt
+*.zip
+*.tar
+*.tar.gz
+*.tgz
 
 # Logs and temporary files
 *.log
+*.log.jsonl
 tmp/
 temp/
 
 # FiftyOne / dataset tooling
 fiftyone/
 .fiftyone/
+

@@ -49,6 +49,7 @@ def main() -> None:
     parser.add_argument("--no-augment", action="store_true")
     parser.add_argument("--patience", type=int, default=0, help="Early-stop patience. 0 disables early stopping.")
     parser.add_argument("--model-size", choices=["small", "base", "attn"], default="small")
+    parser.add_argument("--device", choices=["auto", "cpu", "cuda"], default="auto", help="Training device.")
     parser.add_argument("--seed", type=int, default=7)
     parser.add_argument("--progress-every", type=int, default=20, help="Print training progress every N batches. 0 disables batch progress.")
     parser.add_argument("--log-output", default=None, help="JSONL metric log path. Defaults to <checkpoint>.log.jsonl.")
@@ -68,7 +69,11 @@ def main() -> None:
     train_loader = DataLoader(train_set, batch_size=args.batch_size, shuffle=True)
     val_loader = DataLoader(val_set, batch_size=args.batch_size)
 
-    device = "cuda" if torch.cuda.is_available() else "cpu"
+    if args.device == "cuda" and not torch.cuda.is_available():
+        raise RuntimeError("CUDA was requested with --device cuda, but CUDA is not available.")
+    device = "cuda" if args.device == "auto" and torch.cuda.is_available() else args.device
+    if device == "auto":
+        device = "cpu"
     model_kwargs = {"hidden_dim": 96, "image_size": 64, "base_channels": 24}
     if args.model_size == "base":
         model_kwargs = {"hidden_dim": 128, "image_size": 96, "base_channels": 32}
