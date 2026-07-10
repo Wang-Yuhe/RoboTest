@@ -1,0 +1,604 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>RoboTest 相关工作调研与效果对比</title>
+  <style>
+    :root {
+      --ink: #172026;
+      --muted: #58636d;
+      --paper: #fbfaf7;
+      --line: #d9dedf;
+      --blue: #2166a5;
+      --teal: #008a7a;
+      --green: #447a3b;
+      --gold: #a66c00;
+      --red: #a13c32;
+      --lav: #6d5aa8;
+      --panel: #ffffff;
+      --soft: #eef5f3;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: var(--paper);
+      font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
+    }
+
+    a {
+      color: var(--blue);
+      text-decoration-thickness: 1px;
+      text-underline-offset: 3px;
+    }
+
+    header {
+      min-height: 86vh;
+      display: grid;
+      align-items: end;
+      color: white;
+      background:
+        linear-gradient(180deg, rgba(13, 22, 28, .34), rgba(13, 22, 28, .82)),
+        url("report_assets/hard_negative_prediction.png") center/cover;
+    }
+
+    .hero-inner {
+      width: min(1180px, calc(100% - 40px));
+      margin: 0 auto;
+      padding: 80px 0 64px;
+    }
+
+    .eyebrow {
+      margin: 0 0 14px;
+      font-size: 14px;
+      letter-spacing: 0;
+      color: #d8f0ec;
+      font-weight: 700;
+    }
+
+    h1 {
+      max-width: 980px;
+      margin: 0;
+      font-size: clamp(38px, 6vw, 76px);
+      line-height: 1.04;
+      letter-spacing: 0;
+    }
+
+    .subtitle {
+      max-width: 850px;
+      margin: 22px 0 0;
+      font-size: 20px;
+      color: #ecf4f2;
+    }
+
+    main {
+      width: min(1180px, calc(100% - 40px));
+      margin: 0 auto;
+      padding: 48px 0 80px;
+    }
+
+    section {
+      margin: 56px 0;
+    }
+
+    h2 {
+      margin: 0 0 18px;
+      font-size: 30px;
+      line-height: 1.25;
+      letter-spacing: 0;
+    }
+
+    h3 {
+      margin: 0 0 8px;
+      font-size: 19px;
+      line-height: 1.35;
+      letter-spacing: 0;
+    }
+
+    p {
+      margin: 0 0 16px;
+    }
+
+    .lead {
+      max-width: 960px;
+      font-size: 18px;
+      color: #34414a;
+    }
+
+    .grid {
+      display: grid;
+      gap: 18px;
+    }
+
+    .grid.cols-3 {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .grid.cols-2 {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 20px;
+      box-shadow: 0 8px 24px rgba(23, 32, 38, .06);
+    }
+
+    .metric {
+      min-height: 148px;
+    }
+
+    .metric strong {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 34px;
+      line-height: 1.1;
+      color: var(--teal);
+    }
+
+    .metric:nth-child(2) strong {
+      color: var(--gold);
+    }
+
+    .metric:nth-child(3) strong {
+      color: var(--lav);
+    }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      min-height: 26px;
+      padding: 2px 9px;
+      border-radius: 999px;
+      background: var(--soft);
+      color: #315b56;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .source-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 8px 24px rgba(23, 32, 38, .05);
+    }
+
+    th,
+    td {
+      padding: 13px 14px;
+      border-bottom: 1px solid var(--line);
+      vertical-align: top;
+      text-align: left;
+    }
+
+    th {
+      background: #eef2f3;
+      font-size: 14px;
+      color: #25333b;
+    }
+
+    tr:last-child td {
+      border-bottom: 0;
+    }
+
+    .pill {
+      white-space: nowrap;
+      font-weight: 800;
+      color: var(--green);
+    }
+
+    .warn {
+      color: var(--red);
+      font-weight: 800;
+    }
+
+    .note {
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .media-strip {
+      display: grid;
+      grid-template-columns: 1.1fr .9fr .9fr;
+      gap: 16px;
+      align-items: stretch;
+    }
+
+    figure {
+      margin: 0;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 8px 24px rgba(23, 32, 38, .05);
+    }
+
+    figure img {
+      width: 100%;
+      height: 240px;
+      object-fit: cover;
+      display: block;
+      background: #edf1f2;
+    }
+
+    figcaption {
+      padding: 12px 14px;
+      font-size: 14px;
+      color: var(--muted);
+    }
+
+    .roadmap {
+      counter-reset: step;
+      display: grid;
+      gap: 14px;
+    }
+
+    .roadmap li {
+      list-style: none;
+      position: relative;
+      padding: 16px 16px 16px 52px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+    }
+
+    .roadmap li::before {
+      counter-increment: step;
+      content: counter(step);
+      position: absolute;
+      left: 16px;
+      top: 16px;
+      width: 24px;
+      height: 24px;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      color: white;
+      background: var(--teal);
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    footer {
+      width: min(1180px, calc(100% - 40px));
+      margin: 0 auto;
+      padding: 0 0 60px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    @media (max-width: 900px) {
+      header {
+        min-height: 74vh;
+      }
+
+      .grid.cols-3,
+      .grid.cols-2,
+      .media-strip {
+        grid-template-columns: 1fr;
+      }
+
+      table {
+        display: block;
+        overflow-x: auto;
+      }
+
+      figure img {
+        height: 220px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="hero-inner">
+      <p class="eyebrow">联网调研报告 · 更新：2026-07-07</p>
+      <h1>RoboTest 相关工作、论文与 GitHub 项目对比</h1>
+      <p class="subtitle">围绕中文指令九宫格视觉定位、CAPTCHA 鲁棒性评估、GUI/视觉 grounding 与鼠标轨迹行为建模，对公开研究和开源项目进行横向整理。</p>
+    </div>
+  </header>
+
+  <main>
+    <section>
+      <h2>结论先行</h2>
+      <p class="lead">RoboTest 最接近的外部方向不是传统字符 CAPTCHA 识别，而是“视觉语言指令 grounding + 交互动作预测”的小型可控实验环境。相比 CAPTCHA-X、MCA-Bench、OpenCaptchaWorld 这类真实或半真实 CAPTCHA benchmark，RoboTest 的优势在于任务边界清楚、数据可生成、训练和错误分析成本低；短板是尚未覆盖真实网页交互、用户可用性、严格 source-image 划分和复杂多步验证。</p>
+      <div class="grid cols-3">
+        <div class="card metric">
+          <strong>91.69%</strong>
+          <span class="tag">本地日志</span>
+          <p>30k hard-negative / 50 epochs small 模型的 best validation accuracy。展示稿中另有 92.22% 版本，建议最终论文统一到同一次实验记录。</p>
+        </div>
+        <div class="card metric">
+          <strong>82.4%</strong>
+          <span class="tag">项目 brief</span>
+          <p>100 类真实照片九宫格 attention 模型 Top-1 accuracy；Top-3 为 96.87%。这更接近真实图像任务，但仍不是真实网站 CAPTCHA。</p>
+        </div>
+        <div class="card metric">
+          <strong>15.7%</strong>
+          <span class="tag">CAPTCHA-X</span>
+          <p>CAPTCHA-X v2 报告中商业 VLM 直接求解高难度 CAPTCHA 的 accuracy。说明空间推理与交互仍是当前 VLM 的明显弱项。</p>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2>项目定位</h2>
+      <div class="grid cols-2">
+        <div class="card">
+          <h3>RoboTest 做了什么</h3>
+          <p>输入一张 3x3 九宫格图像和一条中文任务提示，例如“请点击斑马”，模型输出目标格子、点击坐标，并可生成鼠标移动轨迹。代码中已有规则颜色基线、模板图文匹配、CNN/Transformer 融合模型，以及多目标动作序列原型。</p>
+        </div>
+        <div class="card">
+          <h3>它不是做什么</h3>
+          <p>它不是面向真实网站的验证码绕过工具，也不应把生成数据准确率表述为真实 CAPTCHA 攻破率。更准确的说法是：它是一个用于课程项目和可控实验的多模态定位 benchmark 原型。</p>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2>视觉材料</h2>
+      <div class="media-strip">
+        <figure>
+          <img src="../brief.assets/image-20260606132902152.png" alt="RoboTest report figure">
+          <figcaption>项目 brief 中的结果示意图，用于展示 9 宫格定位与预测可视化。</figcaption>
+        </figure>
+        <figure>
+          <img src="report_assets/hard_negative_prediction.png" alt="Hard-negative prediction example">
+          <figcaption>相似类别 hard-negative 预测样例，适合放入报告说明细粒度视觉区分。</figcaption>
+        </figure>
+        <figure>
+          <img src="report_assets/dataset_photo_action_montage.png" alt="Real-photo click-all dataset examples">
+          <figcaption>早期生成式九宫格样例，适合作为数据生成流程的轻量示意。</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <section>
+      <h2>论文与 Benchmark 对比</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>工作</th>
+            <th>核心内容</th>
+            <th>报告效果</th>
+            <th>与 RoboTest 的关系</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><a href="https://arxiv.org/abs/2510.06067">CAPTCHA-X</a></td>
+            <td>真实 CAPTCHA reasoning benchmark，覆盖 7 类任务，包含逐步动作方案和 grounding 标注。</td>
+            <td>v2 摘要称直接使用商业 VLM 在困难任务上约 <span class="pill">15.7%</span> accuracy；v1 摘要中有 21.9% 版本。</td>
+            <td>最适合作为“RoboTest 后续升级方向”的参照：从单步九宫格定位扩展到多类、多步、带推理标注的任务。</td>
+          </tr>
+          <tr>
+            <td><a href="https://arxiv.org/abs/2506.05982">MCA-Bench</a> / <a href="https://github.com/noheadwuzonglin/MCA-Bench">GitHub</a></td>
+            <td>统一评估多模态 CAPTCHA 鲁棒性的 benchmark，整合 20 个真实任务，并使用统一 pass-rate 协议。</td>
+            <td>强调 challenge complexity、interaction depth 与模型可解性之间的关系，代码和数据公开。</td>
+            <td>RoboTest 可借鉴它的统一评价口径，把 grid accuracy、Top-3、click distance、action success 合成更清晰的指标组。</td>
+          </tr>
+          <tr>
+            <td><a href="https://arxiv.org/html/2505.24878v1">Open CaptchaWorld</a> / <a href="https://github.com/MetaAgentX/OpenCaptchaWorld">GitHub</a></td>
+            <td>面向 MLLM web agents 的网页化 CAPTCHA 风格任务平台，包含拖拽、顺序点击、滑块对齐和计数任务。</td>
+            <td>Hugging Face 数据页显示约 862 条样本；GitHub 描述其目标是测试感知、推理和多步交互。</td>
+            <td>它比 RoboTest 更接近真实 web agent；RoboTest 更轻量、更适合教学和模型 ablation。</td>
+          </tr>
+          <tr>
+            <td><a href="https://arxiv.org/abs/2405.07496">Oedipus</a></td>
+            <td>LLM-enhanced reasoning CAPTCHA solver，把复杂 CAPTCHA 拆成 DSL 描述的简单子任务，再逐步求解。</td>
+            <td>摘要报告平均成功率 <span class="pill">63.5%</span>。</td>
+            <td>给 RoboTest 的启发是：多目标和空间关系任务可以加入显式中间步骤与动作序列，而不只预测一个格子。</td>
+          </tr>
+          <tr>
+            <td><a href="https://arxiv.org/abs/2502.05461">IllusionCAPTCHA</a></td>
+            <td>用视觉错觉构造 human-easy / AI-hard CAPTCHA，并设计误导选项。</td>
+            <td>摘要称可使 LLM 被误导，用户研究一试通过率 <span class="pill">86.95%</span>。</td>
+            <td>RoboTest 当前是“让模型学会定位”，而 IllusionCAPTCHA 是“让模型更难定位”。可作为防御式 future work。</td>
+          </tr>
+          <tr>
+            <td><a href="https://arxiv.org/abs/2512.02318">COGNITION</a></td>
+            <td>评估 7 个商业/开源 MLLM 在 18 类真实 CAPTCHA 上的表现，包括单次准确率、重试成功、延迟和成本。</td>
+            <td>结论强调识别型和低交互 CAPTCHA 更易被 MLLM 解决，而细粒度定位、多步空间推理和跨帧一致性仍更难。</td>
+            <td>支持 RoboTest 后续重点：加入细粒度定位、多步点击、跨样本一致性和成本/延迟指标。</td>
+          </tr>
+          <tr>
+            <td><a href="https://arxiv.org/abs/2410.18233">DMTG</a></td>
+            <td>基于熵控制扩散模型的人类鼠标轨迹生成与评估框架。</td>
+            <td>摘要报告相对其他模型可降低 bot detection accuracy <span class="pill">4.75%-9.73%</span>。</td>
+            <td>RoboTest 的轨迹目前是规则生成。可以借鉴“复杂度控制”和轨迹指标，但报告中应避免把它写成绕过真实系统。</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>视觉 Grounding 与 GUI Agent 项目</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>项目</th>
+            <th>能力</th>
+            <th>公开效果</th>
+            <th>可借鉴点</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><a href="https://github.com/IDEA-Research/GroundingDINO">GroundingDINO</a></td>
+            <td>输入 image + text prompt，输出开放词汇目标框和词级相似度。</td>
+            <td>ECCV 2024 官方实现；GitHub README 明确其接受图文对并输出 object boxes。</td>
+            <td>可作为 RoboTest 的强视觉 grounding baseline：从 9 格分类改为“文本提示定位目标区域”。</td>
+          </tr>
+          <tr>
+            <td><a href="https://github.com/njucckevin/SeeClick">SeeClick</a></td>
+            <td>GUI grounding 预训练，让模型仅根据截图和自然语言执行点击/输入动作。</td>
+            <td>ACL 2024；开源模型、数据和 ScreenSpot 评估代码。</td>
+            <td>与 RoboTest 的“根据指令点击格子”形式相似，但场景是真实 GUI，而不是九宫格。</td>
+          </tr>
+          <tr>
+            <td><a href="https://github.com/showlab/ShowUI">ShowUI</a></td>
+            <td>统一 vision-language-action GUI agent，建模截图、指令和动作历史。</td>
+            <td>摘要报告 zero-shot screenshot grounding <span class="pill">75.1%</span>，视觉 token 减少 33%，训练提速 1.4x。</td>
+            <td>适合作为 action sequence 方向参考，尤其是把观察、历史动作和下一步操作统一建模。</td>
+          </tr>
+          <tr>
+            <td><a href="https://arxiv.org/abs/2410.23218">OS-Atlas</a></td>
+            <td>面向通用 GUI agent 的 foundation action model，发布跨平台 GUI grounding 语料。</td>
+            <td>摘要称语料超过 13M GUI elements，并在多平台六个 benchmark 上超过已有开源模型。</td>
+            <td>提示 RoboTest 数据生成可以更系统化：按平台/目标/动作类型组织，而不是只按图像类别。</td>
+          </tr>
+          <tr>
+            <td><a href="https://arxiv.org/html/2504.07981v1">ScreenSpot-Pro</a> / <a href="https://github.com/likaixin2000/screenspot-pro-gui-grounding">GitHub</a></td>
+            <td>高分辨率专业软件 GUI grounding benchmark，覆盖 23 个应用、5 个行业、3 个操作系统。</td>
+            <td>论文摘要称当时最好模型仅 <span class="pill">18.9%</span>，GitHub 后续模型 SE-GUI 报告 7B 达 47.2%。</td>
+            <td>说明简单九宫格结果不能直接外推到复杂界面；需要按场景复杂度分层报告。</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>GitHub 项目扫描</h2>
+      <div class="grid cols-2">
+        <div class="card">
+          <h3>MCA-Bench</h3>
+          <p>提供跨 CAPTCHA 类型的 benchmark 和统一 pass-rate 管线。对 RoboTest 最有价值的是指标设计和数据组织方式，而不是具体求解器。</p>
+          <div class="source-row"><a href="https://github.com/noheadwuzonglin/MCA-Bench">GitHub</a><a href="https://arxiv.org/abs/2506.05982">Paper</a></div>
+        </div>
+        <div class="card">
+          <h3>OpenCaptchaWorld</h3>
+          <p>以 web platform 的方式组织 CAPTCHA-like puzzles，适合评估多模态 agent 的 perception、reasoning 和多步交互能力。</p>
+          <div class="source-row"><a href="https://github.com/MetaAgentX/OpenCaptchaWorld">GitHub</a><a href="https://arxiv.org/abs/2505.24878">Paper</a></div>
+        </div>
+        <div class="card">
+          <h3>GroundingDINO</h3>
+          <p>成熟的开放词汇检测与 phrase grounding 项目，可作为 RoboTest 未来的零样本/少样本文本定位 baseline。</p>
+          <div class="source-row"><a href="https://github.com/IDEA-Research/GroundingDINO">GitHub</a><a href="https://www.ecva.net/papers/eccv_2024/papers_ECCV/papers/06319.pdf">ECCV PDF</a></div>
+        </div>
+        <div class="card">
+          <h3>ShowUI / SeeClick / OS-Atlas</h3>
+          <p>这组项目把“看图 + 理解指令 + 输出动作”作为统一任务。RoboTest 的多目标动作序列可以对齐它们的 action modeling 思路。</p>
+          <div class="source-row"><a href="https://github.com/showlab/ShowUI">ShowUI</a><a href="https://github.com/njucckevin/SeeClick">SeeClick</a><a href="https://arxiv.org/abs/2410.23218">OS-Atlas</a></div>
+        </div>
+      </div>
+      <p class="note">说明：一些公开 “CAPTCHA solver” 仓库以绕过真实服务为目标，本报告只做高层比较，不复现攻击流程、不提供可操作绕过步骤。</p>
+    </section>
+
+    <section>
+      <h2>综合对比</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>维度</th>
+            <th>RoboTest 当前状态</th>
+            <th>外部先进工作</th>
+            <th>差距与机会</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>任务类型</td>
+            <td>中文提示 + 9 宫格单目标/多目标定位。</td>
+            <td>CAPTCHA-X、OpenCaptchaWorld 覆盖滑块、拖拽、计数、顺序点击、推理 puzzle。</td>
+            <td>扩展到多步、空间关系和顺序点击，可显著提高研究价值。</td>
+          </tr>
+          <tr>
+            <td>数据来源</td>
+            <td>合成图形、Open Images 裁剪照片、相似类别 hard-negative。</td>
+            <td>MCA-Bench 和 COGNITION 更贴近真实 CAPTCHA 类型；GUI 项目使用真实界面截图。</td>
+            <td>需要独立 test set，并按原始图片 source 划分，避免同源照片泄漏。</td>
+          </tr>
+          <tr>
+            <td>模型方法</td>
+            <td>字符级中文文本编码、CNN cell encoder、Transformer cell context、交互特征融合。</td>
+            <td>GroundingDINO 做开放词汇检测；ShowUI/SeeClick/OS-Atlas 建模截图 grounding 和动作。</td>
+            <td>可以新增 GroundingDINO/CLIP 类零样本 baseline，验证自训练模型是否真正有优势。</td>
+          </tr>
+          <tr>
+            <td>评估指标</td>
+            <td>grid accuracy、Top-3、click distance、动作 exact/click-order。</td>
+            <td>CAPTCHA benchmark 更强调 pass-rate、retry success、latency、cost、human pass rate。</td>
+            <td>建议把“定位准确”与“交互完成”分开汇报，并加入可用性和成本指标。</td>
+          </tr>
+          <tr>
+            <td>效果表述</td>
+            <td>生成/照片九宫格上可达 80%-90% 区间，具体取决于数据版本。</td>
+            <td>真实 CAPTCHA 与 GUI grounding 的难度跨度很大，例如 ScreenSpot-Pro best 18.9%，ShowUI screenshot grounding 75.1%。</td>
+            <td><span class="warn">不能直接横向比较准确率</span>。应按任务难度、数据来源、是否真实交互分别解释。</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>建议写进课程报告的相关工作段落</h2>
+      <div class="card">
+        <p>现有 CAPTCHA 研究正在从传统字符识别转向视觉推理、多模态理解和交互行为建模。CAPTCHA-X、MCA-Bench 与 OpenCaptchaWorld 将多类型 CAPTCHA 组织为统一 benchmark，用于衡量 VLM 或 web agent 在视觉感知、空间推理和动作执行中的能力边界；Oedipus 和 COGNITION 进一步说明，现代 MLLM 已能解决部分识别型任务，但在细粒度定位、多步空间推理和跨帧一致性上仍存在明显困难。另一方面，DMTG 等工作关注鼠标轨迹的行为特征，表明交互式 CAPTCHA 不只依赖视觉识别，还依赖时间序列行为判断。</p>
+        <p>与这些工作相比，RoboTest 的目标不是攻击真实 CAPTCHA 系统，而是构建一个可控的多模态九宫格定位原型。它将中文任务指令、九宫格图像候选、目标格预测和点击轨迹生成放在同一流程中，使模型能够学习“哪一格符合当前文本目标”的跨模态匹配关系。该设置比真实 CAPTCHA benchmark 更轻量、更易复现，也便于课程实验中的数据生成、模型对比和错误可视化；但它尚未覆盖真实网页环境、多步推理任务和严格的泛化测试，因此实验结果应解释为可控数据集上的视觉语言 grounding 能力，而不是实际 CAPTCHA 绕过能力。</p>
+      </div>
+    </section>
+
+    <section>
+      <h2>后续实验路线</h2>
+      <ol class="roadmap">
+        <li><strong>统一实验记录。</strong> 先确定最终采用 91.69% 还是 92.22% 那次训练结果，并保存对应 log、checkpoint、评估命令和数据版本。</li>
+        <li><strong>补严格划分。</strong> 按原始图片 source 划分 train/val/test，再生成九宫格，避免同一张原图以不同裁剪进入验证集。</li>
+        <li><strong>加入强 baseline。</strong> 增加 GroundingDINO、CLIP retrieval 或轻量 VLM prompt baseline，与当前 CNN/Transformer 版本比较。</li>
+        <li><strong>扩展动作任务。</strong> 把“请点击所有 X”“先点 A 再点 B”“点击 A 右边的 B”等任务作为 action sequence 主线。</li>
+        <li><strong>对齐外部指标。</strong> 除 accuracy 外报告 pass-rate、Top-k、click distance、action success、latency、错误类别和人工可读失败样例。</li>
+      </ol>
+    </section>
+
+    <section>
+      <h2>参考来源</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>类别</th>
+            <th>来源</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>CAPTCHA benchmark</td>
+            <td><a href="https://arxiv.org/abs/2510.06067">CAPTCHA-X</a>；<a href="https://arxiv.org/abs/2506.05982">MCA-Bench</a>；<a href="https://arxiv.org/html/2505.24878v1">Open CaptchaWorld</a>；<a href="https://arxiv.org/abs/2512.02318">COGNITION</a></td>
+          </tr>
+          <tr>
+            <td>CAPTCHA solver / defense</td>
+            <td><a href="https://arxiv.org/abs/2405.07496">Oedipus</a>；<a href="https://arxiv.org/abs/2502.05461">IllusionCAPTCHA</a>；<a href="https://arxiv.org/abs/2410.18233">DMTG</a></td>
+          </tr>
+          <tr>
+            <td>Grounding / GUI agent</td>
+            <td><a href="https://github.com/IDEA-Research/GroundingDINO">GroundingDINO</a>；<a href="https://github.com/njucckevin/SeeClick">SeeClick</a>；<a href="https://github.com/showlab/ShowUI">ShowUI</a>；<a href="https://arxiv.org/abs/2410.23218">OS-Atlas</a>；<a href="https://arxiv.org/html/2504.07981v1">ScreenSpot-Pro</a></td>
+          </tr>
+          <tr>
+            <td>本项目文件</td>
+            <td><code>README.md</code>、<code>brief.md</code>、<code>docs/report.md</code>、<code>outputs/similar_small_30k_e50.log.jsonl</code>、<code>outputs/report_deliverables/RoboTest-QA-prep.md</code></td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+  </main>
+
+  <footer>
+    本报告用于课程项目相关工作梳理与效果定位。涉及 CAPTCHA 求解的公开工作仅作学术比较，不提供绕过真实服务的操作流程。
+  </footer>
+</body>
+</html>

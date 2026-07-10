@@ -1,21 +1,21 @@
 # Multimodal CAPTCHA Grounding
 
-一个可运行的多模态数据处理课程项目：自动生成 9 宫格图文验证任务，用轻量多模态模型根据中文指令定位目标格子，并生成鼠标点击轨迹。
+一个可运行的多模态数据处理课程项目：构建合成与真实图片 9 宫格图文任务，用专训模型或多模态大模型根据中文指令定位目标格，并生成离散点击动作和鼠标轨迹。
 
 ## 项目目标
 
 输入：
 
-- 一张合成 9 宫格验证图片
-- 一条中文任务描述，例如 `请点击红色消防栓`
+- 一张合成或真实图片组成的 9 宫格任务图
+- 一条中文任务描述，例如 `请点击红色消防栓` 或 `请点击所有汽车`
 
 输出：
 
-- 目标格子编号
-- 目标点击坐标
-- 模拟鼠标运动轨迹
+- 单目标格或所有同类目标格
+- `move_to_cell / click / done` 动作序列
+- 可视化点击结果与模拟鼠标运动轨迹
 
-项目只使用合成数据，面向多模态理解、视觉定位和交互轨迹建模教学，不针对真实网站验证码或安全系统。
+项目面向多模态理解、视觉定位和交互轨迹建模教学。真实图片实验使用项目自建九宫格任务，并通过 source-disjoint split 控制数据泄露；不用于绕过第三方验证码或安全系统。
 
 ## 快速开始
 
@@ -67,6 +67,26 @@ python3 scripts/predict_image.py \
   --output outputs/custom_prediction.png
 ```
 
+## Web 展示
+
+Streamlit 页面包含单目标定位、点击所有同类目标和 Cloudflare Turnstile 合规测试接入三个标签页：
+
+```bash
+python3 -m pip install -r requirements-minimal.txt
+streamlit run app.py
+```
+
+单目标标签页可以自动生成合成样本。点击所有同类目标标签页需要先按下文命令准备真实图片数据和 action checkpoint，再在侧边栏选择对应路径。页面支持手工修改 prompt、结构化颜色/位置/大小 planner、DeepSeek prompt 改写，以及 Qwen-VL 单样本对比。
+
+API key 只通过密码输入框或环境变量传入，不要写入源码：
+
+```bash
+export DEEPSEEK_API_KEY="..."
+export DASHSCOPE_API_KEY="..."
+```
+
+Windows PowerShell 对应使用 `$env:DEEPSEEK_API_KEY="..."` 和 `$env:DASHSCOPE_API_KEY="..."`。
+
 ## 目录结构
 
 ```text
@@ -74,16 +94,22 @@ python3 scripts/predict_image.py \
 ├── app.py                         # Streamlit 可视化演示
 ├── data/                          # 生成的数据集
 ├── docs/
-│   └── report.md                  # 课程报告骨架
+│   ├── robotest_experiment_report.tex # 实验报告 LaTeX 源文件
+│   ├── robotest_experiment_report_updated.pdf # 最新编译报告
+│   └── report_assets/             # 数据、失败案例和 Web 截图
 ├── outputs/                       # 模型权重和预测图
 ├── scripts/
 │   ├── evaluate.py                # 批量评估并保存失败案例
+│   ├── evaluate_action_sequence.py # click-all 评估、阈值选择和失败图
+│   ├── evaluate_vlm_action_sequence.py # Qwen-VL 对照评测
+│   ├── build_photo_action_dataset.py # source-disjoint 真实图片 action 数据
 │   ├── build_photo_grid_dataset.py # 从真实照片目录拼 9 宫格
 │   ├── download_openimages_subset.py # 下载 Open Images 子集
 │   ├── generate_dataset.py        # 生成合成图文对
 │   ├── make_demo_html.py          # 无需 Streamlit 的静态网页 Demo
 │   ├── predict_image.py           # 对自定义图片和文本指令做预测
 │   ├── train.py                   # 训练多模态定位模型
+│   ├── train_action_sequence.py   # 训练 click-all cell selector
 │   └── predict.py                 # 命令行预测示例
 └── src/multimodal_captcha/
     ├── baseline.py                # 规则颜色基线
@@ -91,6 +117,9 @@ python3 scripts/predict_image.py \
     ├── generator.py               # 图像和标注生成
     ├── dataset.py                 # PyTorch Dataset
     ├── model.py                   # 图文融合模型
+    ├── action_sequence.py         # 动作 token 编解码与指标
+    ├── prompt_rewriter.py         # DeepSeek/规则 prompt 改写
+    ├── query_planner.py           # 颜色、位置和大小属性规划
     ├── trajectory.py              # 鼠标轨迹生成
     └── visualize.py               # 可视化工具
 ```
@@ -237,8 +266,99 @@ python3 scripts/evaluate.py --mode template
 python3 scripts/evaluate.py --mode model --checkpoint outputs/model.pt
 ```
 
+## 动作序列扩展
+
+当前 `dev` 分支新增了“点击所有同类目标”的动作序列训练任务。模型输入九宫格图片和中文指令，例如 `请点击所有汽车`，先预测 9 个格子中哪些需要点击，再转换成离散动作 token：`move_to_cell / click / done`。连续鼠标轨迹仍可由现有 `trajectory.py` 根据动作序列渲染。
+
+合成数据只适合 sanity check。正式实验应优先使用真实图片数据集，并先按源图片文件划分 train/val/test，避免同一张照片泄露到不同 split：
+
+```bash
+python3 scripts/build_photo_action_dataset.py \
+  --photo-root data/photo_objects \
+  --output-dir data/photo_action_click_all \
+  --num-train 10000 \
+  --num-val 2000 \
+  --num-test 2000 \
+  --min-images-per-class 50 \
+  --max-classes 80 \
+  --image-size 192 \
+  --min-targets 2 \
+  --max-targets 4 \
+  --balanced-targets \
+  --hard-augment
+```
+
+真实图片训练：
+
+```bash
+python3 scripts/train_action_sequence.py \
+  --data-dir data/photo_action_click_all \
+  --output outputs/photo_action_model.pt \
+  --epochs 30 \
+  --batch-size 128 \
+  --model-size base \
+  --image-encoder custom \
+  --aux-weight 0.7 \
+  --device cuda \
+  --patience 8
+```
+
+ResNet18 视觉编码器训练：
+```bash
+python3 scripts/train_action_sequence.py \
+  --data-dir data/photo_action_click_all \
+  --output outputs/photo_action_model_resnet18.pt \
+  --epochs 30 \
+  --batch-size 64 \
+  --model-size base \
+  --image-encoder resnet18 \
+  --pretrained \
+  --aux-weight 0.7 \
+  --lr 0.0003 \
+  --device cuda \
+  --patience 8
+```
+
+完整 split 评估：
+```bash
+python3 scripts/evaluate_action_sequence.py \
+  --data-dir data/photo_action_click_all \
+  --checkpoint outputs/photo_action_model.pt \
+  --split test \
+  --threshold auto \
+  --output-dir outputs/photo_action_eval \
+  --max-failures 24 \
+  --device cuda
+```
+
+AutoDL 训练步骤见 [docs/action_sequence_autodl.md](docs/action_sequence_autodl.md)。
+
+`clip_vit_b32`、CLIP zero-shot 和 ScreenSpot-Pro adapter 需要完整依赖：`python3 -m pip install -r requirements.txt`。默认 ResNet18/Web 流程只需 `requirements-minimal.txt`。
+
+训练完成后可以生成动作可视化：
+
+```bash
+python3 scripts/predict_action_sequence.py \
+  --image data/photo_action_click_all/images/val_photo_action_00000.jpg \
+  --prompt "请点击所有汽车" \
+  --checkpoint outputs/photo_action_model.pt \
+  --output outputs/action_prediction.png
+```
+
+## 代表性实验结果
+
+以下结果来自同一套 source-disjoint paired test split（2,000 个真实图片九宫格样本），指标定义和失败案例见实验报告：
+
+| 方法 | Cell Exact Match | Cell Precision | Cell Recall | Click Order Accuracy |
+|---|---:|---:|---:|---:|
+| 专训 ResNet18，clean 数据 | **0.4600** | **0.8677** | **0.8750** | **0.4600** |
+| 专训 ResNet18，dirty 数据 | 0.4505 | 0.8766 | 0.8632 | 0.4505 |
+| Qwen3-VL-Flash，clean 数据 | 0.1475 | 0.6998 | 0.6081 | 0.1475 |
+
+历史 ResNet18 训练冻结了 backbone 参数，但 BatchNorm running statistics 仍随训练数据更新；当前代码已修复为严格冻结，后续需要重跑才能形成新的 strict-frozen baseline。这些数字说明当前专训模型在固定类别的九宫格 click-all 任务上更有优势，但不代表它具备通用开放世界理解能力。数据清洗带来的提升较小，主要瓶颈仍包括细粒度类别识别、多目标计数和 prompt 分布外泛化。完整分析见 [实验报告 PDF](docs/robotest_experiment_report_updated.pdf)、[LaTeX 源文件](docs/robotest_experiment_report.tex) 与 [机器可读指标](docs/results/action_sequence_benchmark_20260708.json)。
+
 说明：默认生成的九宫格图片不包含文字标签，颜色和类别标注只保存在 `manifest.jsonl` 中。`--debug-labels` 只用于人工检查数据。当前默认实验数据使用 `medium` 难度，颜色会重复，因此单纯颜色基线不再足够；模板图文匹配模型用于展示更完整的“文本条件 + 图像颜色/形状特征 + 目标定位 + 轨迹生成”链路。神经模型是课程扩展基线，适合继续改进为 CLIP、ViT、Cross-Attention 或目标检测式方案。
 
 轨迹生成已使用随机起点和随机格内落点，并带有曲线、轻微抖动和末端停顿，不再固定从左上角移动到格子中心。
 
-课程报告骨架见 [docs/report.md](docs/report.md)。
+课程实验报告见 [docs/robotest_experiment_report_updated.pdf](docs/robotest_experiment_report_updated.pdf)。

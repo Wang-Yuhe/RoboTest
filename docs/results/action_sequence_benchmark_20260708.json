@@ -1,0 +1,75 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-07-08",
+  "task": "click_all_same_class",
+  "grid_size": 9,
+  "dataset": {
+    "name": "photo_action_click_all_paired_80_classes",
+    "split_policy": "source_disjoint",
+    "train_samples": 10000,
+    "validation_samples": 2000,
+    "test_samples": 2000,
+    "paired_dirty_clean": true
+  },
+  "runs": [
+    {
+      "name": "specialized_resnet18_clean",
+      "model": "ActionCellSelector",
+      "image_encoder": "resnet18",
+      "pretrained": true,
+      "encoder_train_mode": "frozen",
+      "historical_batchnorm_running_stats_updated": true,
+      "data_variant": "clean",
+      "threshold": 0.5,
+      "threshold_source": "auto_val",
+      "metrics": {
+        "cell_exact_match": 0.46,
+        "cell_precision": 0.8676689245002478,
+        "cell_recall": 0.8750416527824059,
+        "click_order_accuracy": 0.46
+      }
+    },
+    {
+      "name": "specialized_resnet18_dirty",
+      "model": "ActionCellSelector",
+      "image_encoder": "resnet18",
+      "pretrained": true,
+      "encoder_train_mode": "frozen",
+      "historical_batchnorm_running_stats_updated": true,
+      "data_variant": "dirty",
+      "threshold": 0.5,
+      "threshold_source": "auto_val",
+      "metrics": {
+        "cell_exact_match": 0.4505,
+        "cell_precision": 0.8765993265993266,
+        "cell_recall": 0.8632294429708223,
+        "click_order_accuracy": 0.4505
+      }
+    },
+    {
+      "name": "qwen3_vl_flash_clean",
+      "provider": "qwen",
+      "model": "qwen3-vl-flash",
+      "data_variant": "clean",
+      "metrics": {
+        "cell_exact_match": 0.1475,
+        "cell_precision": 0.6997699386503068,
+        "cell_recall": 0.6081306231256248,
+        "click_order_accuracy": 0.1475,
+        "count_accuracy": 0.388
+      }
+    }
+  ],
+  "artifacts": {
+    "report": "../robotest_experiment_report_updated.pdf",
+    "clean_failure_montage": "../report_assets/failure_clean_montage.png",
+    "vlm_failure_montage": "../report_assets/failure_vlm_montage.png",
+    "web_screenshot": "../report_assets/streamlit_demo.png"
+  },
+  "notes": [
+    "Metrics were copied from the preserved local evaluation outputs.",
+    "The historical ResNet18 runs froze parameters but still updated BatchNorm running statistics; rerun the corrected code for a strict-frozen baseline.",
+    "Raw datasets, checkpoints, predictions, and full failure directories are intentionally excluded from Git.",
+    "The specialized model result is task-specific and is not evidence of stronger open-world visual reasoning."
+  ]
+}

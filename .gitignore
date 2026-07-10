@@ -57,6 +57,9 @@ pictures/003_square.png
 # Logs and temporary files
 *.log
 *.log.jsonl
+docs/*.aux
+docs/*.out
+docs/*.toc
 tmp/
 temp/
 
