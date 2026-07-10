@@ -8,6 +8,8 @@ from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFont
 
+from src.multimodal_captcha.action_sequence import target_indices_to_actions
+
 
 COLORS = {
     "红色": (220, 54, 46),
@@ -241,6 +243,97 @@ def generate_dataset(
     for idx in range(num_samples):
         image, metadata = make_sample(rng, image_size=image_size, debug_labels=debug_labels, difficulty=difficulty)
         image_name = f"sample_{idx:05d}.png"
+        image.save(image_dir / image_name)
+        records.append({"image": f"images/{image_name}", **metadata})
+
+    manifest = output / "manifest.jsonl"
+    with manifest.open("w", encoding="utf-8") as f:
+        for record in records:
+            f.write(json.dumps(record, ensure_ascii=False) + "\n")
+    return manifest
+
+
+def make_action_sample(
+    rng: random.Random,
+    image_size: int = 288,
+    debug_labels: bool = False,
+    min_targets: int = 2,
+    max_targets: int = 4,
+) -> tuple[Image.Image, dict]:
+    grid = 3
+    cell = image_size // grid
+    image = Image.new("RGB", (image_size, image_size), (245, 246, 248))
+    draw = ImageDraw.Draw(image)
+    font = _font(14)
+
+    target_object = rng.choice(OBJECTS)
+    target_count = rng.randint(min_targets, max_targets)
+    target_indices = sorted(rng.sample(range(9), target_count))
+    distractors = [name for name in OBJECTS if name != target_object]
+    rng.shuffle(distractors)
+
+    items = []
+    distractor_idx = 0
+    for idx in range(9):
+        if idx in target_indices:
+            items.append(CellItem(rng.choice(list(COLORS)), target_object))
+        else:
+            object_name = distractors[distractor_idx % len(distractors)]
+            distractor_idx += 1
+            items.append(CellItem(rng.choice(list(COLORS)), object_name))
+
+    for row in range(grid):
+        for col in range(grid):
+            item = items[row * grid + col]
+            x0, y0 = col * cell, row * cell
+            x1, y1 = x0 + cell, y0 + cell
+            draw.rectangle([x0, y0, x1, y1], fill=(250, 251, 252), outline=(205, 210, 218), width=2)
+            pad = int(cell * 0.12)
+            DRAWERS[item.object_name](draw, (x0 + pad, y0 + pad, x1 - pad, y1 - pad), COLORS[item.color_name])
+            if debug_labels:
+                label = f"{item.color_name}{item.object_name}"
+                draw.text((x0 + 6, y1 - 22), label, fill=(72, 78, 88), font=font)
+
+    actions = target_indices_to_actions(target_indices)
+    prompt = f"请点击所有{target_object}"
+    metadata = {
+        "prompt": prompt,
+        "target_object": target_object,
+        "target_indices": target_indices,
+        "target_index": target_indices[0],
+        "click": None,
+        "actions": actions,
+        "items": [item.__dict__ for item in items],
+        "image_size": image_size,
+        "difficulty": "click_all",
+    }
+    return image, metadata
+
+
+def generate_action_dataset(
+    output_dir: str | Path,
+    num_samples: int,
+    seed: int = 7,
+    image_size: int = 288,
+    debug_labels: bool = False,
+    min_targets: int = 2,
+    max_targets: int = 4,
+) -> Path:
+    output = Path(output_dir)
+    image_dir = output / "images"
+    image_dir.mkdir(parents=True, exist_ok=True)
+    rng = random.Random(seed)
+    records = []
+
+    for idx in range(num_samples):
+        image, metadata = make_action_sample(
+            rng,
+            image_size=image_size,
+            debug_labels=debug_labels,
+            min_targets=min_targets,
+            max_targets=max_targets,
+        )
+        image_name = f"action_{idx:05d}.png"
         image.save(image_dir / image_name)
         records.append({"image": f"images/{image_name}", **metadata})
 

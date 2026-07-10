@@ -11,6 +11,8 @@ from PIL import Image
 from PIL import ImageEnhance, ImageFilter
 from torch.utils.data import Dataset
 
+from src.multimodal_captcha.action_sequence import encode_action_targets, target_indices_to_cell_targets
+
 
 PAD = "<pad>"
 UNK = "<unk>"
@@ -110,5 +112,62 @@ class CaptchaDataset(Dataset):
             "target": torch.tensor(target_index, dtype=torch.long),
             "object_ids": torch.tensor(object_ids, dtype=torch.long),
             "target_object": torch.tensor(target_object, dtype=torch.long),
+            "prompt": record["prompt"],
+        }
+
+
+class ActionSequenceDataset(Dataset):
+    def __init__(
+        self,
+        root: str | Path,
+        split: str = "train",
+        vocab: dict[str, int] | None = None,
+        object_vocab: dict[str, int] | None = None,
+        train_ratio: float = 0.85,
+        max_action_len: int = 10,
+        augment: bool = False,
+    ):
+        self.root = Path(root)
+        manifest = self.root / "manifest.jsonl"
+        with manifest.open("r", encoding="utf-8") as f:
+            records = [json.loads(line) for line in f]
+
+        if records and "split" in records[0]:
+            self.records = [record for record in records if record.get("split") == split]
+        else:
+            cut = int(len(records) * train_ratio)
+            self.records = records[:cut] if split == "train" else records[cut:]
+        self.vocab = vocab or build_vocab(manifest)
+        self.object_vocab = object_vocab or build_object_vocab(manifest)
+        self.max_action_len = max_action_len
+        self.augment = augment and split == "train"
+
+    def __len__(self) -> int:
+        return len(self.records)
+
+    def augment_image(self, image: Image.Image) -> Image.Image:
+        return CaptchaDataset.augment_image(self, image)
+
+    def __getitem__(self, idx: int) -> dict[str, torch.Tensor | str]:
+        record = self.records[idx]
+        image = Image.open(self.root / record["image"]).convert("RGB")
+        if self.augment:
+            image = self.augment_image(image)
+        arr = np.asarray(image, dtype=np.float32) / 255.0
+        arr = np.transpose(arr, (2, 0, 1))
+        object_ids = []
+        for item in record.get("items", []):
+            object_ids.append(self.object_vocab.get(item.get("object_name", ""), -100))
+        object_ids = (object_ids + [-100] * 9)[:9]
+
+        return {
+            "image": torch.tensor(arr, dtype=torch.float32),
+            "text": encode_text(record["prompt"], self.vocab),
+            "action_targets": torch.tensor(
+                encode_action_targets(record["actions"], self.max_action_len),
+                dtype=torch.long,
+            ),
+            "cell_targets": torch.tensor(target_indices_to_cell_targets(record["target_indices"]), dtype=torch.float32),
+            "object_ids": torch.tensor(object_ids, dtype=torch.long),
             "prompt": record["prompt"],
         }
