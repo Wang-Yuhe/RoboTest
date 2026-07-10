@@ -215,7 +215,7 @@ python scripts/evaluate.py \
 
 ## 结果解读
 
-![image-20260606132902152](./brief.assets/image-20260606132902152.png)
+![单目标九宫格定位示例](./docs/report_assets/single_target_demo.png)
 
 当前模型已经能在 100 类级别真实照片 9 宫格任务上达到较可用的定位效果。Top-1 为 82.4%，说明第一预测还有一定错误率；Top-3 为 96.87%，说明模型大多数情况下已经把目标排在很靠前的位置。
 

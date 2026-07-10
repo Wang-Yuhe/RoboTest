@@ -1,4 +1,4 @@
-\documentclass[UTF8,a4paper,12pt]{ctexart}
+\documentclass[UTF8,a4paper,12pt,fontset=fandol]{ctexart}
 
 \usepackage{geometry}
 \usepackage{graphicx}
@@ -12,6 +12,9 @@
 \usepackage{longtable}
 \usepackage{caption}
 \usepackage{colortbl}
+\usepackage{listings}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,calc}
 
 \geometry{left=2.5cm,right=2.5cm,top=2.6cm,bottom=2.6cm}
 \hypersetup{
@@ -23,7 +26,6 @@
 \urlstyle{same}
 \graphicspath{
   {report_assets/}
-  {../brief.assets/}
   {../outputs/picture_predictions_attn40k/}
   {../outputs/demo_assets/}
 }
@@ -32,20 +34,72 @@
 \newcommand{\pathcode}[1]{\path{#1}}
 \definecolor{tablehead}{RGB}{224,236,248}
 \definecolor{tablerow}{RGB}{247,250,253}
+\definecolor{codebg}{RGB}{247,248,250}
+\definecolor{codeborder}{RGB}{205,211,220}
+\definecolor{codekeyword}{RGB}{24,84,150}
+\definecolor{codecomment}{RGB}{80,120,82}
+\definecolor{codestring}{RGB}{160,65,45}
+\definecolor{archinput}{RGB}{235,240,246}
+\definecolor{archtext}{RGB}{229,242,233}
+\definecolor{archvision}{RGB}{249,239,213}
+\definecolor{archfusion}{RGB}{235,231,245}
+\definecolor{archoutput}{RGB}{248,228,225}
+\definecolor{archaux}{RGB}{235,235,235}
 \renewcommand{\arraystretch}{1.18}
 \setlength{\tabcolsep}{5pt}
 \setlength{\emergencystretch}{2em}
 \captionsetup{font=small,labelfont=bf}
-
-\title{\heiti RoboTest：面向九宫格人机验证的多模态数据分析系统\\
-\large 多模态数据分析课程实验报告}
-\author{
-小组3 \quad 多模态数据分析\\[0.5em]
-刘瀚哲 \quad 22336148\\
-王宇和 \quad 22355082\\
-冯乙山 \quad 22336070
+\lstdefinestyle{robotestpython}{
+  language=Python,
+  basicstyle=\ttfamily\scriptsize,
+  numbers=left,
+  numberstyle=\tiny\color{gray},
+  numbersep=8pt,
+  frame=single,
+  rulecolor=\color{codeborder},
+  backgroundcolor=\color{codebg},
+  xleftmargin=1.8em,
+  framexleftmargin=1.4em,
+  framesep=5pt,
+  breaklines=true,
+  breakatwhitespace=false,
+  showstringspaces=false,
+  keepspaces=true,
+  columns=fullflexible,
+  tabsize=4,
+  keywordstyle=\color{codekeyword}\bfseries,
+  commentstyle=\color{codecomment},
+  stringstyle=\color{codestring},
+  captionpos=b
 }
+
+\title{RoboTest：面向九宫格人机验证的多模态数据分析系统}
+\author{刘瀚哲、王宇和、冯乙山}
 \date{2026年7月}
+
+\makeatletter
+\renewcommand{\maketitle}{%
+  \begin{center}
+    \vspace*{0.4em}
+    {\heiti\bfseries\LARGE \@title\par}
+    \vspace{1.2em}
+    {\normalsize\bfseries 小组3\quad 多模态数据分析\par}
+    \vspace{0.6em}
+    {\small
+      \begin{tabular}{c@{\hspace{2.5em}}c}
+        刘瀚哲 & 22336148 \\
+        王宇和 & 22355082 \\
+        冯乙山 & 22336070
+      \end{tabular}\par
+    }
+    \vspace{0.8em}
+    {\small \@date\par}
+    \vspace{0.45em}
+    {\small 项目仓库：\href{https://github.com/Wang-Yuhe/RoboTest.git}{github.com/Wang-Yuhe/RoboTest}\par}
+  \end{center}
+  \vspace{0.8em}
+}
+\makeatother
 
 \begin{document}
 \maketitle
@@ -66,7 +120,17 @@
 
 本项目构建了一个可控的九宫格验证码式视觉定位环境。给定一张 $3\times3$ 九宫格图片和一条中文指令，模型需要判断哪一个格子与文本目标匹配，并输出目标格子中心或格内随机点击点。形式化地，输入为图像 $I$ 和文本指令 $T$，输出为目标格子编号 $\hat{y}\in\{0,\ldots,8\}$，以及对应点击坐标 $\hat{p}=(\hat{x},\hat{y})$。在扩展设置中，系统还支持生成一条从起点移动到目标位置的鼠标轨迹。
 
+对于最终采用的 click-all 设置，真实标签是目标格集合 $Y\subseteq\{0,\ldots,8\}$。模型为每个格子输出 logit $s_i$，经 Sigmoid 和阈值 $\tau$ 解码为
+\[
+  \hat{Y}_{\tau}=\{i\mid \sigma(s_i)\geq\tau,\ i\in\{0,\ldots,8\}\}.
+\]
+若阈值解码得到空集，则回退选择 $\arg\max_i s_i$；其余情况下将预测格子按编号排序，依次转换为 \code{move\_to\_cell}、\code{click} 和 \code{done} 动作，从而同时输出目标集合、点击坐标与可执行动作序列。
+
 本实验的边界是教学与研究原型，而不是真实验证码绕过系统。所有训练与评估均基于本项目生成的数据集或公开图片数据裁剪后的九宫格组合。报告中的准确率反映模型在可控九宫格定位任务上的表现，不代表对真实网站安全机制的攻击能力。
+
+\subsection{成员贡献说明}
+
+本项目由刘瀚哲、王宇和、冯乙山三位成员共同完成，三位成员贡献比例均为 $1/3$。
 
 \section{相关工作调研}
 
@@ -187,7 +251,7 @@ RoboTest 的整体流程包括四个阶段：数据生成、图文定位、点�
   \centering
   \includegraphics[width=0.68\linewidth]{single_target_demo.png}
   \caption{单目标定位模型的真实可视化输出。模型以九宫格图片和中文提示为输入，输出目标格概率、预测点击点和模拟鼠标轨迹。}
-  \label{fig:model-architecture}
+  \label{fig:single-target-output}
 \end{figure}
 
 \subsection{规则颜色基线}
@@ -226,9 +290,62 @@ RoboTest 的整体流程包括四个阶段：数据生成、图文定位、点�
 
 \subsection{Click-all Action Sequence 模型}
 
-Click-all 模型将九宫格定位从单标签分类扩展为多标签 cell selection。图像侧仍按九个 cell 提取视觉特征，文本侧编码“请点击所有某类别”的中文指令，融合后对每个 cell 输出一个独立概率。推理时，模型根据阈值选择所有目标格；如果没有 cell 超过阈值，则回退到 top-1，避免输出空动作。被选中的 cell 按从小到大的格子编号转换为动作序列，形成可执行的 \code{move\_to\_cell/click/done} 输出。
+Click-all 模型将九宫格定位从单标签分类扩展为多标签 cell selection。图像侧仍按九个 cell 提取视觉特征，文本侧编码“请点击所有某类别”的中文指令，融合后对每个 cell 输出一个独立概率。推理时，模型根据阈值选择所有目标格；如果没有 cell 超过阈值，则回退到 top-1，避免输出空动作。被选中的 cell 按从小到大的格子编号转换为动作序列，形成可执行的 \code{move\_to\_cell/click/done} 输出。最终模型的完整数据流如图~\ref{fig:model-architecture} 所示。
 
 阈值选择是该任务的关键。过低阈值会提升 recall 但引入多余点击，过高阈值会提升 precision 但漏点目标。项目最初从 0.1 开始搜索阈值，后来在失败分析中发现部分目标概率整体偏低，因此将默认 grid 扩展为 \code{0.03, 0.05, 0.07, 0.1, ...}。最终评估脚本支持 \code{--threshold auto}，在验证集上选择阈值，再固定到测试集，避免直接在测试集上调参。
+
+\begin{figure}[H]
+  \centering
+  \resizebox{\linewidth}{!}{%
+  \begin{tikzpicture}[
+    font=\sffamily\small,
+    node distance=6mm and 8mm,
+    box/.style={draw=black!55, line width=0.55pt, rounded corners=2pt, align=center, minimum height=12mm, text width=25mm, inner sep=4pt},
+    input/.style={box, fill=archinput},
+    textbranch/.style={box, fill=archtext},
+    visionbranch/.style={box, fill=archvision},
+    fusion/.style={box, fill=archfusion, text width=32mm},
+    output/.style={box, fill=archoutput},
+    aux/.style={box, fill=archaux, text width=27mm},
+    flow/.style={-{Stealth[length=2.2mm]}, line width=0.8pt, draw=black!70},
+    optional/.style={-{Stealth[length=2.2mm]}, line width=0.7pt, dashed, draw=black!55}
+  ]
+    \node[input] (prompt) {中文指令\\``请点击所有汽车''};
+    \node[textbranch, right=of prompt] (textenc) {字符 Token\\Embedding + BiGRU\\文本特征 $f_t$};
+
+    \node[input, below=9mm of prompt] (image) {$3\times3$ 九宫格图像 $I$};
+    \node[visionbranch, right=of image] (vision) {切分 9 个 cell\\Resize $96\times96$\\共享 ResNet18};
+    \node[visionbranch, right=of vision] (cellfeat) {线性投影 + 位置编码\\cell 特征 $f_i$};
+
+    \node[fusion, right=10mm of cellfeat, yshift=10mm] (fusion) {九格图文交互\\$[f_i; f_t; f_i\odot f_t; |f_i-f_t|]$};
+    \node[output, right=of fusion] (selector) {MLP Cell Selector\\9 个独立 logits};
+    \node[output, right=of selector] (decode) {Sigmoid + 自动阈值\\无命中时 top-1};
+    \node[output, right=of decode] (selected) {目标格集合\\$\{c_1,\ldots,c_k\}$};
+    \node[output, right=of selected] (actions) {动作序列\\move / click / done};
+    \node[output, right=of actions] (trajectory) {格内落点\\平滑鼠标轨迹};
+
+    \node[aux, below=8mm of fusion] (objecthead) {辅助 Object Head\\每格类别监督\\仅训练阶段};
+    \node[aux, below=8mm of selector] (counthead) {可选 Count Head\\$\mathrm{mean}(f_i)\oplus f_t\rightarrow k$\\top-k 解码};
+
+    \draw[flow] (prompt) -- (textenc);
+    \draw[flow] (image) -- (vision);
+    \draw[flow] (vision) -- (cellfeat);
+    \draw[flow] (textenc.east) -| (fusion.north west);
+    \draw[flow] (cellfeat.east) -| (fusion.south west);
+    \draw[flow] (fusion) -- (selector);
+    \draw[flow] (selector) -- (decode);
+    \draw[flow] (decode) -- (selected);
+    \draw[flow] (selected) -- (actions);
+    \draw[flow] (actions) -- (trajectory);
+    \draw[optional] (cellfeat.south east) |- (objecthead.west);
+    \draw[optional] (fusion.south) -- (counthead.west);
+    \draw[optional] (counthead.east) -| (selected.south);
+
+  \end{tikzpicture}%
+  }
+  \caption{RoboTest 最终 click-all 多模态模型架构。主路径将中文指令与九格视觉特征交互融合，独立预测每格点击分数，再解码为动作序列和鼠标轨迹；虚线为 object 辅助监督和可选 count-head top-k 路径。}
+  \label{fig:model-architecture}
+\end{figure}
 
 \begin{figure}[H]
   \centering
@@ -371,6 +488,26 @@ python scripts/train.py \
   \label{fig:hard-negative}
 \end{figure}
 
+\subsection{ResNet18 编码器训练方式消融}
+
+为分析 click-all 模型的主要瓶颈，我们在 clean80 数据上对比了三种 ResNet18 编码器训练方式：参数冻结但保留历史 BatchNorm 统计量更新、仅训练最后一个 ResNet block，以及完整微调图像编码器。三组实验均使用 base action head、10000 条训练样本、2000 条验证样本、batch size 32 和 $3\times10^{-4}$ 学习率。
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.96\linewidth]{resnet18_encoder_ablation.png}
+  \caption{ResNet18 编码器训练方式消融。左图为验证集 cell exact match，右图为训练损失。部分微调与全量微调虽然快速将训练损失降至接近零，验证 exact match 却在较低水平波动；参数冻结设置收敛较慢，后期验证结果更稳定。}
+  \label{fig:resnet18-encoder-ablation}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.96\linewidth]{resnet18_metric_tradeoff.png}
+  \caption{ResNet18 编码器训练方式的验证指标权衡。部分微调和全量微调取得更高 precision，但 recall 和 click-order accuracy 较低；参数冻结设置在后期获得更均衡的召回率与动作序列准确率。}
+  \label{fig:resnet18-metric-tradeoff}
+\end{figure}
+
+这组消融说明，训练损失更低并不必然意味着 click-all 集合预测更准确。在当前数据规模下，解冻较多视觉参数会更快拟合训练集，并倾向以更少的点击换取较高 precision。因此，后续实验不应只根据 loss 或单一 precision 选择 checkpoint，而应结合 exact match、recall 和 click order 统一判断。
+
 \subsection{Click-all 数据清洗实验}
 
 在 click-all action sequence 阶段，我们没有继续盲目增大模型，而是先针对失败图和弱类源数据做数据清洗。表~\ref{tab:dirty-clean} 使用同一个 source pool 和 source split plan 构造 dirty/clean paired 数据集，训练相同的 ResNet18 action 模型，并在 2000 条 source-disjoint 测试样本上评估。历史训练冻结了 backbone 参数，但训练态 BatchNorm running statistics 仍随数据更新，因此这里更准确地称为“参数冻结、BN 统计量适配”，而不是严格 frozen；当前代码已修复该问题，后续需重跑 strict-frozen baseline。clean 数据集的 cell exact match 从 45.05\% 提升到 46.00\%，cell recall 从 86.32\% 提升到 87.50\%；precision 略有下降，说明清洗和低阈值校准更倾向于减少漏检，而不是减少误点。
@@ -390,6 +527,13 @@ python scripts/train.py \
     \bottomrule
   \end{tabular}
 \end{table}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.96\linewidth]{dirty_clean_training_curves.png}
+  \caption{Paired dirty/clean 训练与验证曲线。两组实验的损失与 exact match 收敛过程非常接近，clean paired 在训练后期呈现略高的 exact match 和 recall，与测试集上“改善有限但方向一致”的结果相符。}
+  \label{fig:dirty-clean-training-curves}
+\end{figure}
 
 这个结果没有表现为“大幅跃升”，但对项目决策很重要：弱类失败并不完全是模型容量问题，源图质量、类别语义边界和阈值策略同样影响最终动作序列。裙子、帐篷、船、人、玩具等类别容易出现目标过小、裁剪不完整、主体不明确或类内差异过大的问题，因此后续应继续采用人工 contact sheet review、per-class blacklist 和固定实验集，而不是只增加训练轮数。
 
@@ -462,7 +606,7 @@ Click-all 任务的难点也不同于单目标分类。单目标任务只需选�
   \endhead
   \pathcode{src/multimodal_captcha/generator.py} & 生成合成九宫格数据、中文提示、目标标签和多目标动作序列标签。\\
   \pathcode{src/multimodal_captcha/dataset.py} & 读取 manifest 文件，构造 PyTorch Dataset，完成图像加载、文本编码和 train/val 划分。\\
-  \pathcode{src/multimodal_captcha/model.py} & 定义 \code{MultimodalGridLocator} 和 \code{ActionSequenceLocator}，实现 CNN、GRU、Transformer 和图文融合结构。\\
+  \pathcode{src/multimodal_captcha/model.py} & {\raggedright 定义 \code{MultimodalGridLocator}、\code{ActionSequenceLocator} 和最终 click-all 模型 \code{ActionCellSelector}，实现 CNN、GRU、Transformer 和图文融合结构。\par}\\
   \pathcode{src/multimodal_captcha/action_sequence.py} & 定义 click-all 任务中 target indices、动作 token 和点击 cell 集合之间的转换逻辑。\\
   \pathcode{src/multimodal_captcha/action_checkpoint.py} & 保存和加载 action sequence checkpoint，记录模型配置、vocab 和 object vocab。\\
   \pathcode{src/multimodal_captcha/query_planner.py} & 将自然语言提示解析为对象、颜色、位置和大小等结构化查询。\\
@@ -488,16 +632,17 @@ Click-all 任务的难点也不同于单目标分类。单目标任务只需选�
 项目的最小复现实验可以通过以下命令完成：
 
 \begin{verbatim}
-python3 scripts/generate_dataset.py --num-samples 600 --difficulty medium
-python3 scripts/train.py --epochs 2 --batch-size 64 --progress-every 5
-python3 scripts/evaluate.py --mode template
-streamlit run app.py
+python scripts/generate_dataset.py --num-samples 600 --difficulty medium
+python scripts/train.py --epochs 2 --batch-size 64 \
+  --output outputs/model.pt --progress-every 5
+python scripts/evaluate.py --mode model --checkpoint outputs/model.pt
+streamlit run app.py --server.port 8501
 \end{verbatim}
 
 真实照片 100 类模型可使用 \code{brief.md} 中记录的训练命令复现。若不重新训练，也可以直接加载已有 checkpoint 进行单张图片预测：
 
 \begin{verbatim}
-python3 scripts/predict_image.py \
+python scripts/predict_image.py \
   --image path/to/your_grid.png \
   --prompt "请点击汽车" \
   --checkpoint outputs/photo_model_100cls_attn.pt \
@@ -508,7 +653,7 @@ python3 scripts/predict_image.py \
 
 项目提供 Streamlit Web 页面作为最终展示入口，运行命令为：
 \begin{verbatim}
-streamlit run app.py
+streamlit run app.py --server.port 8501
 \end{verbatim}
 
 页面主要包含三个展示方向：
@@ -672,12 +817,83 @@ python scripts/evaluate_vlm_action_sequence.py \
 streamlit run app.py
 \end{verbatim}
 
-\section{附录：后续待补材料}
+\clearpage
+\section{附录：核心算法代码}
 
-\begin{itemize}[leftmargin=2em]
-  \item 补充训练曲线图、更多失败案例图片和弱类 contact sheet；
-  \item 将早期 single-target 结果也迁移到严格 source-level split 协议下复测；
-  \item 若需要提交 PDF，使用 XeLaTeX 编译本文档，并检查所有图片路径。
-\end{itemize}
+本附录摘录实验中直接决定模型输出的核心实现。代码由 \code{listings} 从仓库源文件直接引用，行号与当前提交版本一致；数据加载、命令行解析和 Web 展示等工程性代码未重复附上，完整实现见项目仓库。
+
+\subsection{九宫格图文特征融合}
+
+\pathcode{src/multimodal_captcha/model.py} 中的 \code{MultimodalGridLocator} 使用双向 GRU 编码中文指令，将整张图像切分为九个 cell，通过共享视觉编码器提取特征。下面的构造代码定义了特征投影、位置编码、Transformer 上下文建模和交互融合层。
+
+\lstinputlisting[
+  style=robotestpython,
+  firstline=133,
+  lastline=174,
+  firstnumber=133,
+  caption={文本、图像与九格上下文模块。},
+  label={lst:grid-locator-init}
+]{../src/multimodal_captcha/model.py}
+
+前向计算先对九个 cell 统一 resize 并编码，再将 cell 特征与文本特征、逐元素乘积和绝对差拼接，最终为每个格子输出一个定位 logit。
+
+\lstinputlisting[
+  style=robotestpython,
+  firstline=182,
+  lastline=218,
+  firstnumber=182,
+  caption={九宫格切分、编码与图文融合前向计算。},
+  label={lst:grid-locator-forward}
+]{../src/multimodal_captcha/model.py}
+
+\subsection{Click-all 多目标格子选择}
+
+\code{ActionCellSelector} 复用上述图文编码器，但不再对九个格子做单标签 softmax，而是独立输出每格 logit。可选的 count head 同时预测点击数量，用于 top-k 解码。
+
+\lstinputlisting[
+  style=robotestpython,
+  firstline=258,
+  lastline=326,
+  firstnumber=258,
+  caption={Click-all cell selector 与目标数量辅助头。},
+  label={lst:action-cell-selector}
+]{../src/multimodal_captcha/model.py}
+
+\subsection{动作序列编码与解码}
+
+动作序列模块将目标格集合转换为 \code{move\_to\_cell}、\code{click} 和 \code{done} 序列，并在动作字典与 JSON 形式之间双向转换。完整实现位于 \pathcode{src/multimodal_captcha/action_sequence.py}。
+
+\lstinputlisting[
+  style=robotestpython,
+  firstline=8,
+  lastline=63,
+  firstnumber=8,
+  caption={动作 token 定义及动作序列双向转换。},
+  label={lst:action-token-codec}
+]{../src/multimodal_captcha/action_sequence.py}
+
+推理阶段支持两种解码方式：阈值解码根据每格 sigmoid 概率选择所有目标，若没有格子超过阈值则回退到 argmax；top-k 解码先由 count head 预测数量，再选取得分最高的 $k$ 个格子。
+
+\lstinputlisting[
+  style=robotestpython,
+  firstline=124,
+  lastline=148,
+  firstnumber=124,
+  caption={基于阈值和预测数量的 click-all 解码。},
+  label={lst:action-decode}
+]{../src/multimodal_captcha/action_sequence.py}
+
+\subsection{鼠标轨迹生成}
+
+\pathcode{src/multimodal_captcha/trajectory.py} 在预测格内随机选择落点，并依据起点到落点的距离自适应确定步数。轨迹通过 easing、法向弯曲、中段抖动、随机停顿和终点微抖动组合生成。
+
+\lstinputlisting[
+  style=robotestpython,
+  firstline=21,
+  lastline=67,
+  firstnumber=21,
+  caption={格内落点与平滑鼠标轨迹生成。},
+  label={lst:mouse-trajectory}
+]{../src/multimodal_captcha/trajectory.py}
 
 \end{document}
